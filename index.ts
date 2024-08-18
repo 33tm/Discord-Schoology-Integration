@@ -32,59 +32,63 @@ const schoology = new SchoologyAPI(key, secret)
 client.once(Events.ClientReady, () => console.log("Started"))
 
 client.on(Events.InteractionCreate, async interaction => {
-    if (interaction.isButton() && interaction.customId === "oauth") {
-        const { id } = interaction.user
-        const { key, secret } = await schoology
-            .request("GET", "/oauth/request_token")
-            .then(schoology.format)
+    try {
 
-        if (i2t.has(id)) tokens.delete(i2t.get(id)!)
+        if (interaction.isButton() && interaction.customId === "oauth") {
+            const { id } = interaction.user
+            const { key, secret } = await schoology
+                .request("GET", "/oauth/request_token")
+                .then(schoology.format)
 
-        i2t.set(id, key)
-        tokens.set(key, { id, secret })
+            if (i2t.has(id)) tokens.delete(i2t.get(id)!)
 
-        const expiration = Date.now() + 1000 * 60 * 10
-        setTimeout(() => tokens.delete(key), 1000 * 60 * 10)
+            i2t.set(id, key)
+            tokens.set(key, { id, secret })
 
-        await interaction.user.send({
-            content: `This link will expire at ${time(Math.floor(expiration / 1000))}.`,
-            components: [
-                // @ts-ignore
-                new ActionRowBuilder()
-                    .addComponents(new ButtonBuilder()
-                        .setLabel("Continue with Schoology")
-                        .setURL(`https://pausd.schoology.com/oauth/authorize?oauth_token=${key}&oauth_callback=${callback}`)
-                        .setStyle(ButtonStyle.Link))
-            ]
-        })
-        await interaction.reply({
-            content: "Link sent, check your DMs.",
-            ephemeral: true
-        })
-    }
+            const expiration = Date.now() + 1000 * 60 * 10
+            setTimeout(() => tokens.delete(key), 1000 * 60 * 10)
 
-    if (interaction.isChatInputCommand() && interaction.commandName === "setup") {
-        if (!privileged.includes(parseInt(interaction.user.id))) {
-            await interaction.reply({ content: "Insufficient permission", ephemeral: true })
-            return
-        }
-
-        try {
-            await interaction.channel?.send({
-                content: "dksjalfj;dkls;afjds",
+            await interaction.user.send({
+                content: `This link will expire at ${time(Math.floor(expiration / 1000))}.`,
                 components: [
                     // @ts-ignore
                     new ActionRowBuilder()
                         .addComponents(new ButtonBuilder()
-                            .setCustomId("oauth")
                             .setLabel("Continue with Schoology")
-                            .setStyle(ButtonStyle.Primary))
+                            .setURL(`https://pausd.schoology.com/oauth/authorize?oauth_token=${key}&oauth_callback=${callback}`)
+                            .setStyle(ButtonStyle.Link))
                 ]
             })
-        } catch {
-            await interaction.reply({ content: "Insufficient permission to send in this channel", ephemeral: true })
+            await interaction.reply({
+                content: "Link sent, check your DMs.",
+                ephemeral: true
+            })
+        }
+
+        if (interaction.isChatInputCommand() && interaction.commandName === "setup") {
+            if (!privileged.includes(parseInt(interaction.user.id))) {
+                await interaction.reply({ content: "Insufficient permission", ephemeral: true })
+                return
+            }
+
+            try {
+                await interaction.channel?.send({
+                    content: "dksjalfj;dkls;afjds",
+                    components: [
+                        // @ts-ignore
+                        new ActionRowBuilder()
+                            .addComponents(new ButtonBuilder()
+                                .setCustomId("oauth")
+                                .setLabel("Continue with Schoology")
+                                .setStyle(ButtonStyle.Primary))
+                    ]
+                })
+            } catch {
+                await interaction.reply({ content: "Insufficient permission to send in this channel", ephemeral: true })
+            }
         }
     }
+    catch { }
 })
 
 client.login(token)
