@@ -71,7 +71,6 @@ client.on(Events.InteractionCreate, async interaction => {
 
         try {
             await interaction.channel?.send({
-                content: "dksjalfj;dkls;afjds",
                 components: [
                     // @ts-ignore
                     new ActionRowBuilder()
