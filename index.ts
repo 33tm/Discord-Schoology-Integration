@@ -69,17 +69,21 @@ client.on(Events.InteractionCreate, async interaction => {
             return
         }
 
-        await interaction.channel?.send({
-            content: "dksjalfj;dkls;afjds",
-            components: [
-                // @ts-ignore
-                new ActionRowBuilder()
-                    .addComponents(new ButtonBuilder()
-                        .setCustomId("oauth")
-                        .setLabel("Continue with Schoology")
-                        .setStyle(ButtonStyle.Primary))
-            ]
-        })
+        try {
+            await interaction.channel?.send({
+                content: "dksjalfj;dkls;afjds",
+                components: [
+                    // @ts-ignore
+                    new ActionRowBuilder()
+                        .addComponents(new ButtonBuilder()
+                            .setCustomId("oauth")
+                            .setLabel("Continue with Schoology")
+                            .setStyle(ButtonStyle.Primary))
+                ]
+            })
+        } catch {
+            await interaction.reply({ content: "Insufficient permission to send in this channel", ephemeral: true })
+        }
     }
 })
 
@@ -127,7 +131,6 @@ app.post("/", async (req, res) => {
         .filter(Boolean)
         .filter(({ period }) => period >= 0 && period <= 8)
 
-    console.log(classes)
     const guild = client.guilds.cache.get(guildId)!
     const user = guild.members.cache.get(id)!
 
