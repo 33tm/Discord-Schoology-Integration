@@ -4,6 +4,7 @@ import {
     ButtonStyle,
     ChannelType,
     Client,
+    codeBlock,
     Events,
     GatewayIntentBits,
     PermissionsBitField,
@@ -114,6 +115,9 @@ app.post("/", async (req, res) => {
     if (!uid)
         return res.json({ error: "Invalid Schoology state!" })
 
+    const { name_first } = await schoology
+        .request("GET", `/users/${uid}`, token)
+
     const { section } = await schoology
         .request("GET", `/users/${uid}/sections`, token)
 
@@ -166,7 +170,7 @@ app.post("/", async (req, res) => {
         await user.roles.add(role)
     }
 
-    client.users.cache.get(id)?.send(`Your schedule was automatically detected as:\n\n${classes.map(({ period, name, teacher }) => `${period}. ${name} (${teacher})`).join("\n")}\n\nBother <@694669671466663957> if anything looks incorrect`)
+    client.users.cache.get(id)?.send(`Hey ${name_first}! Your schedule was detected as:\n\n${codeBlock(classes.map(({ period, name, teacher }) => `${period}. ${name} (${teacher})`).join("\n"))}\n\nFeel free to threaten <@694669671466663957> if anything looks incorrect\n\nRun again at any time to update your courses :))`)
 
     return res.json({ classes })
 })
