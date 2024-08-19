@@ -1,7 +1,7 @@
 {
     "scripts": {
         "dev": "bun --watch index.ts",
-        "start": "bun index.ts",
+        "start": "pm2 start --interpreter ~/.bun/bin/bun index.ts",
         "register": "bun register.ts"
     },
     "dependencies": {
