@@ -6,6 +6,7 @@ import {
     Client,
     Events,
     GatewayIntentBits,
+    GuildBasedChannel,
     PermissionsBitField,
     time
 } from "discord.js"
@@ -16,7 +17,7 @@ import {
     origin,
     callback,
     privileged,
-    guildId
+    alternates
 } from "./config.json"
 
 import SchoologyAPI from "schoologyapi"
@@ -24,7 +25,7 @@ import express from "express"
 import cors from "cors"
 
 const i2t = new Map<string, string>()
-const tokens = new Map<string, { id: string, secret: string }>()
+const tokens = new Map<string, { id: string, secret: string, guildId: string }>()
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
 const schoology = new SchoologyAPI(key, secret)
@@ -33,6 +34,12 @@ client.once(Events.ClientReady, () => console.log("Started"))
 
 client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isButton() && interaction.customId === "oauth") {
+        const { guildId } = interaction
+        if (!guildId) {
+            await interaction.reply({ content: "Invalid context", ephemeral: true })
+            return
+        }
+
         const { id } = interaction.user
         const { key, secret } = await schoology
             .request("GET", "/oauth/request_token")
@@ -41,12 +48,12 @@ client.on(Events.InteractionCreate, async interaction => {
         if (i2t.has(id)) tokens.delete(i2t.get(id)!)
 
         i2t.set(id, key)
-        tokens.set(key, { id, secret })
+        tokens.set(key, { id, secret, guildId })
 
         const expiration = Date.now() + 1000 * 60 * 10
         setTimeout(() => tokens.delete(key), 1000 * 60 * 10)
 
-        await interaction.user.send({
+        await interaction.reply({
             content: `This link will expire at ${time(Math.floor(expiration / 1000))}.`,
             components: [
                 // @ts-ignore
@@ -55,10 +62,7 @@ client.on(Events.InteractionCreate, async interaction => {
                         .setLabel("Continue with Schoology")
                         .setURL(`https://pausd.schoology.com/oauth/authorize?oauth_token=${key}&oauth_callback=${callback}`)
                         .setStyle(ButtonStyle.Link))
-            ]
-        })
-        await interaction.reply({
-            content: "Link sent, check your DMs.",
+            ],
             ephemeral: true
         })
     }
@@ -97,7 +101,7 @@ app.post("/", async (req, res) => {
     if (!tokens.has(key))
         return res.json({ error: "Invalid URL!" })
 
-    const { id, secret } = tokens.get(key)!
+    const { id, secret, guildId } = tokens.get(key)!
     tokens.delete(key)
     i2t.delete(id)
 
@@ -135,16 +139,21 @@ app.post("/", async (req, res) => {
 
     user.roles.cache
         .filter(({ name }) => name.match(/\d [A-Z][a-z]+/))
-        .forEach(role => user.roles.remove(role))
+        .forEach(async role => await user.roles.remove(role))
 
     classes.forEach(async ({ period, name, teacher }) => {
         const role = guild.roles.cache.find(({ name }) => name === `${period} ${teacher}`)
             || await guild.roles.create({ name: `${period} ${teacher}` })
 
-        const channel = guild.channels.cache.find(c => c.name === teacher.toLowerCase().replaceAll(" ", "-"))
+        teacher = teacher.toLowerCase()
+            .replaceAll(/\s/g, "-")
+            .replaceAll(/[^a-z-]/g, "")
+
+        const channel = guild.channels.cache.get(alternates[teacher])
+            || guild.channels.cache.find(c => c.name === teacher)
             || await guild.channels.create({ name: teacher, type: ChannelType.GuildText })
 
-        channel.edit({
+        await channel.edit({
             permissionOverwrites: [
                 {
                     id: role.id,
@@ -157,7 +166,7 @@ app.post("/", async (req, res) => {
             ]
         })
 
-        user.roles.add(role)
+        await user.roles.add(role)
     })
 
     client.users.cache.get(id)?.send(`Your schedule was automatically detected as:\n\n${classes.map(({ period, name, teacher }) => `${period}. ${name} (${teacher})`).join("\n")}\n\nBother <@694669671466663957> if anything looks incorrect`)
