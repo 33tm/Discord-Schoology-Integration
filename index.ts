@@ -6,7 +6,6 @@ import {
     Client,
     Events,
     GatewayIntentBits,
-    GuildBasedChannel,
     PermissionsBitField,
     time
 } from "discord.js"
@@ -137,21 +136,20 @@ app.post("/", async (req, res) => {
     const guild = client.guilds.cache.get(guildId)!
     const user = guild.members.cache.get(id)!
 
-    await Promise.all(user.roles.cache
-        .filter(({ name }) => name.match(/\d [A-Z][a-z]+/))
-        .map(user.roles.remove))
+    for (const role of user.roles.cache.filter(({ name }) => name.match(/\d [A-Z][a-z]+/)))
+        await user.roles.remove(role)
 
-    classes.forEach(async ({ period, name, teacher }) => {
+    for (const { period, name, teacher } of classes) {
         const role = guild.roles.cache.find(({ name }) => name === `${period} ${teacher}`)
             || await guild.roles.create({ name: `${period} ${teacher}` })
 
-        teacher = teacher.toLowerCase()
+        const safe = teacher.toLowerCase()
             .replaceAll(/\s/g, "-")
             .replaceAll(/[^a-z-]/g, "")
 
-        const channel = guild.channels.cache.get(alternates[teacher])
-            || guild.channels.cache.find(c => c.name === teacher)
-            || await guild.channels.create({ name: teacher, type: ChannelType.GuildText })
+        const channel = guild.channels.cache.get(alternates[safe])
+            || guild.channels.cache.find(({ name }) => name === safe)
+            || await guild.channels.create({ name: safe, type: ChannelType.GuildText })
 
         await channel.edit({
             permissionOverwrites: [
@@ -167,7 +165,7 @@ app.post("/", async (req, res) => {
         })
 
         await user.roles.add(role)
-    })
+    }
 
     client.users.cache.get(id)?.send(`Your schedule was automatically detected as:\n\n${classes.map(({ period, name, teacher }) => `${period}. ${name} (${teacher})`).join("\n")}\n\nBother <@694669671466663957> if anything looks incorrect`)
 
