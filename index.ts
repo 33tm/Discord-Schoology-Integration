@@ -137,9 +137,9 @@ app.post("/", async (req, res) => {
     const guild = client.guilds.cache.get(guildId)!
     const user = guild.members.cache.get(id)!
 
-    user.roles.cache
+    await Promise.all(user.roles.cache
         .filter(({ name }) => name.match(/\d [A-Z][a-z]+/))
-        .forEach(async role => await user.roles.remove(role))
+        .map(user.roles.remove))
 
     classes.forEach(async ({ period, name, teacher }) => {
         const role = guild.roles.cache.find(({ name }) => name === `${period} ${teacher}`)
