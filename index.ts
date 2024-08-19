@@ -149,20 +149,19 @@ app.post("/", async (req, res) => {
 
         const channel = guild.channels.cache.get(alternates[safe])
             || guild.channels.cache.find(({ name }) => name === safe)
-            || await guild.channels.create({ name: safe, type: ChannelType.GuildText })
+            || await guild.channels.create({
+                name: safe,
+                type: ChannelType.GuildText,
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone,
+                        deny: [PermissionsBitField.Flags.ViewChannel]
+                    }
+                ]
+            })
 
-        await channel.edit({
-            permissionOverwrites: [
-                {
-                    id: role.id,
-                    allow: [PermissionsBitField.Flags.ViewChannel]
-                },
-                {
-                    id: guild.roles.everyone,
-                    deny: [PermissionsBitField.Flags.ViewChannel]
-                }
-            ]
-        })
+        // @ts-ignore
+        await channel.permissionOverwrites.edit(role.id, { ViewChannel: true })
 
         await user.roles.add(role)
     }
