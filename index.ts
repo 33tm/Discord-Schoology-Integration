@@ -136,6 +136,7 @@ app.post("/", async (req, res) => {
         })
         .filter(Boolean)
         .filter(({ period }) => period >= 0 && period <= 8)
+        .sort((a: any, b: any) => a.period - b.period)
 
     const guild = client.guilds.cache.get(guildId)!
     const user = guild.members.cache.get(id)!
