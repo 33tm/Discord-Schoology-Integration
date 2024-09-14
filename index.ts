@@ -5,6 +5,7 @@ import {
     ChannelType,
     Client,
     codeBlock,
+    EmbedBuilder,
     Events,
     GatewayIntentBits,
     PermissionsBitField,
@@ -27,12 +28,15 @@ import cors from "cors"
 const i2t = new Map<string, string>()
 const tokens = new Map<string, { id: string, secret: string, guildId: string }>()
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildPresences] })
 const schoology = new SchoologyAPI(key, secret)
 
 client.once(Events.ClientReady, () => console.log("Started"))
 
 client.on(Events.InteractionCreate, async interaction => {
+    const { guild, user: { id } } = interaction
+    const user = await guild!.members.fetch(id)
+
     if (interaction.isButton() && interaction.customId === "oauth") {
         const { guildId } = interaction
         if (!guildId) {
@@ -40,7 +44,6 @@ client.on(Events.InteractionCreate, async interaction => {
             return
         }
 
-        const { id } = interaction.user
         const { key, secret } = await schoology
             .request("GET", "/oauth/request_token")
             .then(schoology.format)
@@ -68,7 +71,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isChatInputCommand() && interaction.commandName === "setup") {
-        if (!privileged.includes(parseInt(interaction.user.id))) {
+        if (!privileged.includes(parseInt(id))) {
             await interaction.reply({ content: "Insufficient permission", ephemeral: true })
             return
         }
@@ -87,6 +90,31 @@ client.on(Events.InteractionCreate, async interaction => {
         } catch {
             await interaction.reply({ content: "Insufficient permission to send in this channel", ephemeral: true })
         }
+    }
+
+    if (interaction.isChatInputCommand() && interaction.commandName === "mutual") {
+        const mutuals = user.roles.cache
+            .filter(({ name }) => name.match(/\d [A-Z][a-z]+/))
+            .sort((a, b) => parseInt(a.name[0]) - parseInt(b.name[0]))
+            .map(({ name, members }) => {
+                const friendscolonthree = members
+                    .filter(({ id }) => user.id !== id)
+                return `**${name}**\n${friendscolonthree.size
+                    ? friendscolonthree
+                        .map(member => `<@${member.id}>`)
+                        .join("\n")
+                    : "none you will suffer alone"}`
+            })
+
+        await interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor("White")
+                    .setTitle("Mutual Classes")
+                    .setDescription(mutuals.join("\n\n"))
+            ],
+            ephemeral: true
+        })
     }
 })
 

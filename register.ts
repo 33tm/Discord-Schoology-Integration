@@ -9,7 +9,10 @@ import { id, token } from "./config.json"
 const commands = [
     new SlashCommandBuilder()
         .setName("setup")
-        .setDescription("Setup class verification in this channel")
+        .setDescription("Setup class verification in this channel"),
+    new SlashCommandBuilder()
+        .setName("mutual")
+        .setDescription("Display users with mutual classes")
 ]
 
 await new REST()
